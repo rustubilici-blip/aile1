@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String?
+  email     String   @unique
+  password  String
+  role      String   @default("VIEWER")
+  isBanned  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  loginHistory LoginHistory[]
+  messages     Message[]
+
+  @@index([email])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  content   String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model LoginHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Person {
+  id          String    @id @default(cuid())
+  firstName   String
+  lastName    String
+  gender      String    // "MALE", "FEMALE", "OTHER"
+  birthDate   DateTime?
+  deathDate   DateTime?
+  birthplace  String?
+  occupation  String?
+  biography   String?
+  phone       String?
+  imageUrl    String?
+  isElder     Boolean   @default(false)
+  
+  // Relationships
+  fatherId    String?
+  motherId    String?
+  father      Person?   @relation("FatherToChildren", fields: [fatherId], references: [id], onDelete: SetNull)
+  mother      Person?   @relation("MotherToChildren", fields: [motherId], references: [id], onDelete: SetNull)
+  
+  childrenOfFather Person[] @relation("FatherToChildren")
+  childrenOfMother Person[] @relation("MotherToChildren")
+
+  marriages1  Marriage[] @relation("Spouse1")
+  marriages2  Marriage[] @relation("Spouse2")
+  
+  documents   Document[]
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([firstName, lastName])
+  @@index([birthplace])
+  @@index([fatherId])
+  @@index([motherId])
+}
+
+model Marriage {
+  id            String    @id @default(cuid())
+  spouse1Id     String
+  spouse2Id     String
+  marriageDate  DateTime?
+  
+  spouse1       Person    @relation("Spouse1", fields: [spouse1Id], references: [id], onDelete: Cascade)
+  spouse2       Person    @relation("Spouse2", fields: [spouse2Id], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([spouse1Id, spouse2Id])
+}
+
+model Document {
+  id        String   @id @default(cuid())
+  personId  String
+  fileUrl   String
+  type      String   // e.g., "IMAGE", "PDF", "AUDIO"
+  
+  person    Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([personId])
+}
